@@ -1,15 +1,13 @@
 using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
- 
+
 public class PlayerController : MonoBehaviour
 {
     [SerializeField] float movementSpeed;
     [SerializeField] float rotationSpeed;
-    [SerializeField] float runningSpeedMulitplier;
+    [SerializeField] float runningSpeedMultiplier;
     [SerializeField] Transform cameraTransform;
- 
-    //jump variables
     [SerializeField] private float gravity = -9.8f;
     [SerializeField] private float jumpVelocity = 10f;
     
@@ -22,24 +20,23 @@ public class PlayerController : MonoBehaviour
     [Header("Input Actions")]
     [SerializeField] InputActionReference moveInputAction;
     [SerializeField] InputActionReference runInputAction;
-    [SerializeField] InputActionReference jumpInputAction; //jump input
-    private bool _isGrounded;
-    private bool groundedLastFrame;
-    private bool _isJumping;
+    [SerializeField] InputActionReference jumpInputAction;
     
-    //game variables
+    private bool _isGrounded;
+    private bool _isJumping;
     Vector2 moveInput;
     Rigidbody rb;
     Animator anim;
     private Vector3 _velocity;
     float activeRunningSpeedMultiplier = 1f;
+    
+    private bool currentlyWalking = false;
+    private bool currentlyRunning = false;
+    private bool currentlyJumping = false;
  
     readonly int walkingAnimatorHash = Animator.StringToHash("Walking");
     readonly int runningAnimatorHash = Animator.StringToHash("Running");
-    readonly int jumpingAnimatorHash = Animator.StringToHash("Jumping");    //jump anim
- 
-    
-    public event Action OnJumpEvent;
+    readonly int jumpingAnimatorHash = Animator.StringToHash("Jumping");
     
     void Start()
     {
@@ -53,17 +50,47 @@ public class PlayerController : MonoBehaviour
         CheckGrounded();
         if (_isGrounded)
         {
-            anim.SetBool(jumpingAnimatorHash, true);
-            rb.AddForce(0,jumpVelocity,0, ForceMode.Impulse);
+            SetJumpingAnimation(true);
+            rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z); 
+            rb.AddForce(0, jumpVelocity, 0, ForceMode.Impulse);
             _isGrounded = false;
+            _isJumping = true;
         }
     }
- 
+
     void Update()
     {
-       moveInput = moveInputAction.action.ReadValue<Vector2>();
+        moveInput = moveInputAction.action.ReadValue<Vector2>();
+        bool isShiftPressed = runInputAction.action.IsPressed();
+        bool isMoving = moveInput.magnitude > 0;
+        bool shouldWalk = isMoving && !isShiftPressed;
+        bool shouldRun = isMoving && isShiftPressed;
+        bool shouldIdle = !isMoving;
+
+        if (shouldRun && !currentlyRunning)
+        {
+            currentlyWalking = false;
+            anim.SetBool(walkingAnimatorHash, false);
+            currentlyRunning = true;
+            anim.SetBool(runningAnimatorHash, true);
+            activeRunningSpeedMultiplier = runningSpeedMultiplier;
+        }
+        else if (shouldWalk && !currentlyWalking)
+        {
+            currentlyRunning = false;
+            anim.SetBool(runningAnimatorHash, false);
+            currentlyWalking = true;
+            anim.SetBool(walkingAnimatorHash, true);
+            activeRunningSpeedMultiplier = 1f;
+        }
+        else if (shouldIdle && (currentlyWalking || currentlyRunning))
+        {
+            SetWalkingAnimation(false);
+            SetRunningAnimation(false);
+            activeRunningSpeedMultiplier = 1f;
+        }
     }
- 
+
     private void FixedUpdate()
     {
         Vector3 cameraForward = cameraTransform.forward;
@@ -73,45 +100,54 @@ public class PlayerController : MonoBehaviour
         cameraForward.Normalize();
         cameraRight.Normalize();
         Vector3 moveDirection = cameraForward * moveInput.y + cameraRight * moveInput.x;
-        Vector3 velocity = moveDirection * movementSpeed;
+        Vector3 velocity = moveDirection * movementSpeed * activeRunningSpeedMultiplier;
         rb.linearVelocity = new Vector3(velocity.x, rb.linearVelocity.y, velocity.z);
-        if (moveDirection != Vector3.zero)
-        {
-            anim.SetBool(walkingAnimatorHash, true);
-        }
-       if (moveDirection == Vector3.zero)
-        {
-            anim.SetBool(walkingAnimatorHash, false);
-            anim.SetBool(runningAnimatorHash, false);
-        }
-        if (runInputAction.action.IsPressed())
-        {
-            anim.SetBool(runningAnimatorHash, true);
-            activeRunningSpeedMultiplier = runningSpeedMulitplier;
-        }
-        else
-        {
-           anim.SetBool(runningAnimatorHash, false);
-           activeRunningSpeedMultiplier = 1;
-        }
         CheckGrounded();
-        groundedLastFrame = _isGrounded;
-        if (groundedLastFrame)
+        if (_isGrounded && currentlyJumping)
         {
-            anim.SetBool(jumpingAnimatorHash, false);
+            SetJumpingAnimation(false);
+            _isJumping = false;
         }
-       Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-       Quaternion finalRotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed);
-       rb.MoveRotation(finalRotation);
+        if (moveDirection.magnitude > 0)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+            Quaternion finalRotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed);
+            rb.MoveRotation(finalRotation);
+        }
     }
-    
+    private void SetWalkingAnimation(bool value)
+    {
+        if (currentlyWalking != value)
+        {
+            currentlyWalking = value;
+            anim.SetBool(walkingAnimatorHash, value);
+        }
+    }
+    private void SetRunningAnimation(bool value)
+    {
+        if (currentlyRunning != value)
+        {
+            currentlyRunning = value;
+            anim.SetBool(runningAnimatorHash, value);
+        }
+    }
+    private void SetJumpingAnimation(bool value)
+    {
+        if (currentlyJumping != value)
+        {
+            currentlyJumping = value;
+            anim.SetBool(jumpingAnimatorHash, value);
+        }
+    }
+
     public bool IsGrounded()
     {
         return _isGrounded;
     }
-    
+
     private void CheckGrounded()
     {
+        bool wasGrounded = _isGrounded;
         _isGrounded = Physics.SphereCast(
             transform.position + groundCheckOffset,
             groundCheckRadius,
@@ -120,15 +156,21 @@ public class PlayerController : MonoBehaviour
             groundCheckDistance,
             groundLayer
         );
+        if (wasGrounded != _isGrounded)
+        {
+            if (hit.collider != null)
+            {
+                Debug.Log($"[GROUND_CHECK] Hit: {hit.collider.gameObject.name}");
+            }
+        }
     }
-    
+
     void OnDrawGizmos()
     {
         Gizmos.color = Color.purple;
         Gizmos.DrawSphere(transform.position + groundCheckOffset, groundCheckRadius);
         Gizmos.DrawSphere(transform.position + groundCheckOffset + Vector3.down * groundCheckDistance, groundCheckRadius);
-        Gizmos.DrawCube(transform.position + groundCheckOffset + Vector3.down * groundCheckDistance/2, 
-            new Vector3(1.5f* groundCheckRadius, groundCheckDistance , 1.5f * groundCheckRadius) );
+        Gizmos.DrawCube(transform.position + groundCheckOffset + Vector3.down * groundCheckDistance / 2, 
+            new Vector3(1.5f * groundCheckRadius, groundCheckDistance, 1.5f * groundCheckRadius));
     }
 }
-
