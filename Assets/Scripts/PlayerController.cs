@@ -4,140 +4,194 @@ using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
-    [SerializeField] float movementSpeed;
-    [SerializeField] float rotationSpeed;
-    [SerializeField] float runningSpeedMultiplier;
-    [SerializeField] Transform cameraTransform;
+    [Header("Movement")]
+    [SerializeField] private float movementSpeed;
+    [SerializeField] private float rotationSpeed;
+    [SerializeField] private float runningSpeedMultiplier;
+    [SerializeField] private Transform cameraTransform;
+
+    [Header("Jump")]
     [SerializeField] private float gravity = -9.8f;
     [SerializeField] private float jumpVelocity = 10f;
-    
+
     [Header("Ground Check")]
     [SerializeField] private Vector3 groundCheckOffset;
     [SerializeField] private float groundCheckDistance;
     [SerializeField] private float groundCheckRadius;
     [SerializeField] private LayerMask groundLayer;
-    
+
     [Header("Input Actions")]
-    [SerializeField] InputActionReference moveInputAction;
-    [SerializeField] InputActionReference runInputAction;
-    [SerializeField] InputActionReference jumpInputAction;
-    
+    [SerializeField] private InputActionReference moveInputAction;
+    [SerializeField] private InputActionReference runInputAction;
+    [SerializeField] private InputActionReference jumpInputAction;
+
+    private Rigidbody rb;
+    private Animator anim;
+
+    private Vector2 moveInput;
+
     private bool _isGrounded;
+    private bool _wasGrounded;
     private bool _isJumping;
-    Vector2 moveInput;
-    Rigidbody rb;
-    Animator anim;
-    private Vector3 _velocity;
-    float activeRunningSpeedMultiplier = 1f;
-    
-    private bool currentlyWalking = false;
-    private bool currentlyRunning = false;
-    private bool currentlyJumping = false;
- 
-    readonly int walkingAnimatorHash = Animator.StringToHash("Walking");
-    readonly int runningAnimatorHash = Animator.StringToHash("Running");
-    readonly int jumpingAnimatorHash = Animator.StringToHash("Jumping");
-    
-    void Start()
+
+    private float activeRunningSpeedMultiplier = 1f;
+    private readonly int walkingAnimatorHash = Animator.StringToHash("Walking");
+    private readonly int runningAnimatorHash = Animator.StringToHash("Running");
+    private readonly int jumpingAnimatorHash = Animator.StringToHash("Jumping");
+
+    private void Start()
     {
         rb = GetComponent<Rigidbody>();
         anim = GetComponent<Animator>();
+
         jumpInputAction.action.performed += Jump;
+    }
+
+    private void OnDestroy()
+    {
+        if (jumpInputAction != null)
+        {
+            jumpInputAction.action.performed -= Jump;
+        }
+    }
+
+    private void Update()
+    {
+        moveInput = moveInputAction.action.ReadValue<Vector2>();
+        bool isMoving = moveInput.sqrMagnitude > 0.01f;
+        bool isRunning = runInputAction.action.IsPressed() && isMoving;
+        UpdateMovementAnimation(isMoving, isRunning);
+        anim.SetBool(jumpingAnimatorHash, _isJumping);
+    }
+
+    private void FixedUpdate()
+    {
+        CheckGrounded();
+
+        HandleLanding();
+
+        MovePlayer();
+        RotatePlayer();
+    }
+
+    private void UpdateMovementAnimation(bool isMoving, bool isRunning)
+    {
+        if (isRunning)
+        {
+            anim.SetBool(walkingAnimatorHash, false);
+            anim.SetBool(runningAnimatorHash, true);
+
+            activeRunningSpeedMultiplier = runningSpeedMultiplier;
+        }
+        else if (isMoving)
+        {
+            anim.SetBool(walkingAnimatorHash, true);
+            anim.SetBool(runningAnimatorHash, false);
+
+            activeRunningSpeedMultiplier = 1f;
+        }
+        else
+        {
+            anim.SetBool(walkingAnimatorHash, false);
+            anim.SetBool(runningAnimatorHash, false);
+
+            activeRunningSpeedMultiplier = 1f;
+        }
+    }
+
+    private void MovePlayer()
+    {
+        Vector3 cameraForward = cameraTransform.forward;
+        Vector3 cameraRight = cameraTransform.right;
+
+        cameraForward.y = 0f;
+        cameraRight.y = 0f;
+
+        cameraForward.Normalize();
+        cameraRight.Normalize();
+
+        Vector3 moveDirection =
+            cameraForward * moveInput.y +
+            cameraRight * moveInput.x;
+
+        Vector3 velocity =
+            moveDirection *
+            movementSpeed *
+            activeRunningSpeedMultiplier;
+
+        rb.linearVelocity = new Vector3(
+            velocity.x,
+            rb.linearVelocity.y,
+            velocity.z
+        );
+    }
+
+    private void RotatePlayer()
+    {
+        Vector3 cameraForward = cameraTransform.forward;
+        Vector3 cameraRight = cameraTransform.right;
+
+        cameraForward.y = 0f;
+        cameraRight.y = 0f;
+
+        cameraForward.Normalize();
+        cameraRight.Normalize();
+
+        Vector3 moveDirection =
+            cameraForward * moveInput.y +
+            cameraRight * moveInput.x;
+
+        if (moveDirection.sqrMagnitude > 0.01f)
+        {
+            Quaternion targetRotation =
+                Quaternion.LookRotation(moveDirection);
+
+            Quaternion finalRotation =
+                Quaternion.Slerp(
+                    rb.rotation,
+                    targetRotation,
+                    rotationSpeed
+                );
+
+            rb.MoveRotation(finalRotation);
+        }
     }
 
     private void Jump(InputAction.CallbackContext ctx)
     {
         CheckGrounded();
-        if (_isGrounded)
+
+        if (!_isGrounded || _isJumping)
         {
-            SetJumpingAnimation(true);
-            rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0, rb.linearVelocity.z); 
-            rb.AddForce(0, jumpVelocity, 0, ForceMode.Impulse);
-            _isGrounded = false;
-            _isJumping = true;
+            return;
         }
+
+        _isJumping = true;
+        rb.linearVelocity = new Vector3(
+            rb.linearVelocity.x,
+            0f,
+            rb.linearVelocity.z
+        );
+
+        rb.AddForce(
+            Vector3.up * jumpVelocity,
+            ForceMode.Impulse
+        );
+
+        _isGrounded = false;
+
+        anim.SetBool(jumpingAnimatorHash, true);
     }
 
-    void Update()
+    private void HandleLanding()
     {
-        moveInput = moveInputAction.action.ReadValue<Vector2>();
-        bool isShiftPressed = runInputAction.action.IsPressed();
-        bool isMoving = moveInput.magnitude > 0;
-        bool shouldWalk = isMoving && !isShiftPressed;
-        bool shouldRun = isMoving && isShiftPressed;
-        bool shouldIdle = !isMoving;
-
-        if (shouldRun && !currentlyRunning)
+        if (!_wasGrounded && _isGrounded && _isJumping)
         {
-            currentlyWalking = false;
-            anim.SetBool(walkingAnimatorHash, false);
-            currentlyRunning = true;
-            anim.SetBool(runningAnimatorHash, true);
-            activeRunningSpeedMultiplier = runningSpeedMultiplier;
-        }
-        else if (shouldWalk && !currentlyWalking)
-        {
-            currentlyRunning = false;
-            anim.SetBool(runningAnimatorHash, false);
-            currentlyWalking = true;
-            anim.SetBool(walkingAnimatorHash, true);
-            activeRunningSpeedMultiplier = 1f;
-        }
-        else if (shouldIdle && (currentlyWalking || currentlyRunning))
-        {
-            SetWalkingAnimation(false);
-            SetRunningAnimation(false);
-            activeRunningSpeedMultiplier = 1f;
-        }
-    }
-
-    private void FixedUpdate()
-    {
-        Vector3 cameraForward = cameraTransform.forward;
-        Vector3 cameraRight = cameraTransform.right;
-        cameraForward.y = 0;
-        cameraRight.y = 0;
-        cameraForward.Normalize();
-        cameraRight.Normalize();
-        Vector3 moveDirection = cameraForward * moveInput.y + cameraRight * moveInput.x;
-        Vector3 velocity = moveDirection * movementSpeed * activeRunningSpeedMultiplier;
-        rb.linearVelocity = new Vector3(velocity.x, rb.linearVelocity.y, velocity.z);
-        CheckGrounded();
-        if (_isGrounded && currentlyJumping)
-        {
-            SetJumpingAnimation(false);
             _isJumping = false;
+
+            anim.SetBool(jumpingAnimatorHash, false);
         }
-        if (moveDirection.magnitude > 0)
-        {
-            Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-            Quaternion finalRotation = Quaternion.Slerp(rb.rotation, targetRotation, rotationSpeed);
-            rb.MoveRotation(finalRotation);
-        }
-    }
-    private void SetWalkingAnimation(bool value)
-    {
-        if (currentlyWalking != value)
-        {
-            currentlyWalking = value;
-            anim.SetBool(walkingAnimatorHash, value);
-        }
-    }
-    private void SetRunningAnimation(bool value)
-    {
-        if (currentlyRunning != value)
-        {
-            currentlyRunning = value;
-            anim.SetBool(runningAnimatorHash, value);
-        }
-    }
-    private void SetJumpingAnimation(bool value)
-    {
-        if (currentlyJumping != value)
-        {
-            currentlyJumping = value;
-            anim.SetBool(jumpingAnimatorHash, value);
-        }
+        _wasGrounded = _isGrounded;
     }
 
     public bool IsGrounded()
@@ -147,7 +201,6 @@ public class PlayerController : MonoBehaviour
 
     private void CheckGrounded()
     {
-        bool wasGrounded = _isGrounded;
         _isGrounded = Physics.SphereCast(
             transform.position + groundCheckOffset,
             groundCheckRadius,
@@ -156,21 +209,33 @@ public class PlayerController : MonoBehaviour
             groundCheckDistance,
             groundLayer
         );
-        if (wasGrounded != _isGrounded)
-        {
-            if (hit.collider != null)
-            {
-                Debug.Log($"[GROUND_CHECK] Hit: {hit.collider.gameObject.name}");
-            }
-        }
     }
 
-    void OnDrawGizmos()
+    private void OnDrawGizmos()
     {
         Gizmos.color = Color.purple;
-        Gizmos.DrawSphere(transform.position + groundCheckOffset, groundCheckRadius);
-        Gizmos.DrawSphere(transform.position + groundCheckOffset + Vector3.down * groundCheckDistance, groundCheckRadius);
-        Gizmos.DrawCube(transform.position + groundCheckOffset + Vector3.down * groundCheckDistance / 2, 
-            new Vector3(1.5f * groundCheckRadius, groundCheckDistance, 1.5f * groundCheckRadius));
+
+        Gizmos.DrawSphere(
+            transform.position + groundCheckOffset,
+            groundCheckRadius
+        );
+
+        Gizmos.DrawSphere(
+            transform.position +
+            groundCheckOffset +
+            Vector3.down * groundCheckDistance,
+            groundCheckRadius
+        );
+
+        Gizmos.DrawCube(
+            transform.position +
+            groundCheckOffset +
+            Vector3.down * groundCheckDistance / 2f,
+            new Vector3(
+                1.5f * groundCheckRadius,
+                groundCheckDistance,
+                1.5f * groundCheckRadius
+            )
+        );
     }
 }
