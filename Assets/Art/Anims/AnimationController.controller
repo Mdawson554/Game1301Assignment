@@ -402,16 +402,16 @@ AnimatorStateMachine:
     m_Position: {x: 390, y: -200, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -3807979619724713571}
-    m_Position: {x: -220, y: 160, z: 0}
+    m_Position: {x: -80, y: 30, z: 0}
   - serializedVersion: 1
     m_State: {fileID: -3678067446074050813}
-    m_Position: {x: 680, y: 140, z: 0}
+    m_Position: {x: 500, y: 30, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 4925122112627679458}
-    m_Position: {x: -140, y: 590, z: 0}
+    m_Position: {x: -80, y: 270, z: 0}
   - serializedVersion: 1
     m_State: {fileID: 9001614331029077848}
-    m_Position: {x: 580, y: 580, z: 0}
+    m_Position: {x: 510, y: 270, z: 0}
   m_ChildStateMachines: []
   m_AnyStateTransitions: []
   m_EntryTransitions: []

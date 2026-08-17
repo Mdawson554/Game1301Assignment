@@ -5,48 +5,55 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float movementSpeed;
-    [SerializeField] private float rotationSpeed;
-    [SerializeField] private float runningSpeedMultiplier;
+    [SerializeField] private float movementSpeed = 5f;
+    [SerializeField] private float rotationSpeed = 10f;
+    [SerializeField] private float runningSpeedMultiplier = 1.5f;
     [SerializeField] private Transform cameraTransform;
 
     [Header("Jump")]
-    [SerializeField] private float gravity = -9.8f;
     [SerializeField] private float jumpVelocity = 10f;
 
     [Header("Ground Check")]
     [SerializeField] private Vector3 groundCheckOffset;
-    [SerializeField] private float groundCheckDistance;
-    [SerializeField] private float groundCheckRadius;
+    [SerializeField] private float groundCheckDistance = 0.2f;
+    [SerializeField] private float groundCheckRadius = 0.3f;
     [SerializeField] private LayerMask groundLayer;
 
     [Header("Input Actions")]
     [SerializeField] private InputActionReference moveInputAction;
     [SerializeField] private InputActionReference runInputAction;
     [SerializeField] private InputActionReference jumpInputAction;
-    [SerializeField] private InputActionReference InteractInputAction;
+    [SerializeField] private InputActionReference interactInputAction;
 
     private Rigidbody rb;
     private Animator anim;
 
     private Vector2 moveInput;
+    private Vector3 moveDirection;
 
     private bool _isGrounded;
     private bool _wasGrounded;
     private bool _isJumping;
+    private bool _isInteracting;
 
     private float activeRunningSpeedMultiplier = 1f;
+    
     private readonly int walkingAnimatorHash = Animator.StringToHash("Walking");
     private readonly int runningAnimatorHash = Animator.StringToHash("Running");
     private readonly int jumpingAnimatorHash = Animator.StringToHash("Jumping");
-    private readonly int InteractingAnimatorHash = Animator.StringToHash("Interacting");
+    private readonly int interactingAnimatorHash = Animator.StringToHash("Interacting");
+
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         anim = GetComponent<Animator>();
-        jumpInputAction.action.performed += Jump;
+        if (jumpInputAction != null)
+        {
+            jumpInputAction.action.performed += Jump;
+        }
     }
+
 
     private void OnDestroy()
     {
@@ -56,68 +63,73 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+
     private void Update()
     {
-        moveInput = moveInputAction.action.ReadValue<Vector2>();
-        
-        bool isMoving = moveInput.sqrMagnitude > 0.01f;
-        bool isRunning = runInputAction.action.IsPressed() && isMoving;
-        bool isInteracting = InteractInputAction.action.IsPressed();
-        
-        UpdateMovementAnimation(isMoving, isRunning, isInteracting);
-        anim.SetBool(jumpingAnimatorHash, _isJumping);
-    }
-
-    private void FixedUpdate()
-    {
-        CheckGrounded();
-        HandleLanding();
-        MovePlayer();
-        RotatePlayer();
-    }
-
-    private void UpdateMovementAnimation(bool isMoving, bool isRunning, bool isInteracting)
-    {
-        if (isRunning)
+        ReadInput();
+        if (interactInputAction != null)
         {
-            anim.SetBool(walkingAnimatorHash, false);
-            anim.SetBool(runningAnimatorHash, true);
-            anim.SetBool(InteractingAnimatorHash, false);
-            activeRunningSpeedMultiplier = runningSpeedMultiplier;
-        }
-        else if (isMoving)
-        {
-            anim.SetBool(walkingAnimatorHash, true);
-            anim.SetBool(runningAnimatorHash, false);
-            anim.SetBool(InteractingAnimatorHash, false);
-            activeRunningSpeedMultiplier = 1f;
-        }
-        else if (isInteracting)
-        {
-            anim.SetBool(walkingAnimatorHash, false);
-            anim.SetBool(runningAnimatorHash, true);
-            anim.SetBool(InteractingAnimatorHash, true);
+            _isInteracting =
+                interactInputAction.action.IsPressed();
         }
         else
         {
-            anim.SetBool(walkingAnimatorHash, false);
-            anim.SetBool(runningAnimatorHash, false);
-            anim.SetBool(InteractingAnimatorHash, false);
-            activeRunningSpeedMultiplier = 1f;
+            _isInteracting = false;
+        }
+
+        UpdateAnimations();
+    }
+
+
+    private void FixedUpdate()
+    {
+        CalculateMovement();
+        CheckGrounded();
+        HandleLanding();
+        ApplyMovement();
+        ApplyRotation();
+    }
+
+    private void ReadInput()
+    {
+        if (moveInputAction != null)
+        {
+            moveInput =
+                moveInputAction.action.ReadValue<Vector2>();
+        }
+        else
+        {
+            moveInput = Vector2.zero;
         }
     }
 
-    private void MovePlayer()
+    private void CalculateMovement()
     {
-        Vector3 cameraForward = cameraTransform.forward;
-        Vector3 cameraRight = cameraTransform.right;
+        if (cameraTransform == null)
+        {
+            moveDirection = Vector3.zero;
+            return;
+        }
+        Vector3 cameraForward =
+            cameraTransform.forward;
+
+        Vector3 cameraRight =
+            cameraTransform.right;
         cameraForward.y = 0f;
         cameraRight.y = 0f;
         cameraForward.Normalize();
         cameraRight.Normalize();
-        Vector3 moveDirection =
+        moveDirection =
             cameraForward * moveInput.y +
             cameraRight * moveInput.x;
+    }
+
+    private void ApplyMovement()
+    {
+        if (rb == null)
+        {
+            return;
+        }
         Vector3 velocity =
             moveDirection *
             movementSpeed *
@@ -128,33 +140,71 @@ public class PlayerController : MonoBehaviour
             velocity.z
         );
     }
-
-    private void RotatePlayer()
+    private void ApplyRotation()
     {
-        Vector3 cameraForward = cameraTransform.forward;
-        Vector3 cameraRight = cameraTransform.right;
-        cameraForward.y = 0f;
-        cameraRight.y = 0f;
-        cameraForward.Normalize();
-        cameraRight.Normalize();
-        Vector3 moveDirection =
-            cameraForward * moveInput.y +
-            cameraRight * moveInput.x;
-        if (moveDirection.sqrMagnitude > 0.01f)
+        if (rb == null)
         {
-            Quaternion targetRotation =
-                Quaternion.LookRotation(moveDirection);
-
-            Quaternion finalRotation =
-                Quaternion.Slerp(
-                    rb.rotation,
-                    targetRotation,
-                    rotationSpeed
-                );
-            rb.MoveRotation(finalRotation);
+            return;
         }
+        if (moveDirection.sqrMagnitude <= 0.001f)
+        {
+            return;
+        }
+        Quaternion targetRotation =
+            Quaternion.LookRotation(moveDirection);
+        Quaternion finalRotation =
+            Quaternion.Slerp(
+                rb.rotation,
+                targetRotation,
+                rotationSpeed * Time.fixedDeltaTime
+            );
+        rb.MoveRotation(finalRotation);
     }
-    
+
+    private void UpdateAnimations()
+    {
+        bool isMoving =
+            moveInput.sqrMagnitude > 0.01f;
+
+        bool isRunning =
+            runInputAction != null &&
+            runInputAction.action.IsPressed() &&
+            isMoving;
+        if (_isInteracting)
+        {
+            anim.SetBool(walkingAnimatorHash, false);
+            anim.SetBool(runningAnimatorHash, false);
+            anim.SetBool(interactingAnimatorHash, true);
+            activeRunningSpeedMultiplier = 1f;
+        }
+        else if (isRunning)
+        {
+            anim.SetBool(walkingAnimatorHash, false);
+            anim.SetBool(runningAnimatorHash, true);
+            anim.SetBool(interactingAnimatorHash, false);
+            activeRunningSpeedMultiplier =
+                runningSpeedMultiplier;
+        }
+        else if (isMoving)
+        {
+            anim.SetBool(walkingAnimatorHash, true);
+            anim.SetBool(runningAnimatorHash, false);
+            anim.SetBool(interactingAnimatorHash, false);
+            activeRunningSpeedMultiplier = 1f;
+        }
+        else
+        {
+            anim.SetBool(walkingAnimatorHash, false);
+            anim.SetBool(runningAnimatorHash, false);
+            anim.SetBool(interactingAnimatorHash, false);
+            activeRunningSpeedMultiplier = 1f;
+        }
+
+        anim.SetBool(
+            jumpingAnimatorHash,
+            _isJumping
+        );
+    }
     private void Jump(InputAction.CallbackContext ctx)
     {
         CheckGrounded();
@@ -175,23 +225,6 @@ public class PlayerController : MonoBehaviour
         _isGrounded = false;
         anim.SetBool(jumpingAnimatorHash, true);
     }
-
-    private void HandleLanding()
-    {
-        if (!_wasGrounded && _isGrounded && _isJumping)
-        {
-            _isJumping = false;
-
-            anim.SetBool(jumpingAnimatorHash, false);
-        }
-        _wasGrounded = _isGrounded;
-    }
-
-    public bool IsGrounded()
-    {
-        return _isGrounded;
-    }
-
     private void CheckGrounded()
     {
         _isGrounded = Physics.SphereCast(
@@ -204,28 +237,37 @@ public class PlayerController : MonoBehaviour
         );
     }
 
+
+    private void HandleLanding()
+    {
+        if (!_wasGrounded &&
+            _isGrounded &&
+            _isJumping)
+        {
+            _isJumping = false;
+
+            anim.SetBool(
+                jumpingAnimatorHash,
+                false
+            );
+        }
+        _wasGrounded = _isGrounded;
+    }
+
+    public bool IsGrounded()
+    {
+        return _isGrounded;
+    }
+    public bool IsInteracting()
+    {
+        return _isInteracting;
+    }
+    
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.purple;
-        Gizmos.DrawSphere(
-            transform.position + groundCheckOffset,
-            groundCheckRadius
-        );
-        Gizmos.DrawSphere(
-            transform.position +
-            groundCheckOffset +
-            Vector3.down * groundCheckDistance,
-            groundCheckRadius
-        );
-        Gizmos.DrawCube(
-            transform.position +
-            groundCheckOffset +
-            Vector3.down * groundCheckDistance / 2f,
-            new Vector3(
-                1.5f * groundCheckRadius,
-                groundCheckDistance,
-                1.5f * groundCheckRadius
-            )
-        );
+        Gizmos.DrawSphere(transform.position + groundCheckOffset, groundCheckRadius);
+        Gizmos.DrawSphere(transform.position + groundCheckOffset + Vector3.down * groundCheckDistance, groundCheckRadius);
+        Gizmos.DrawCube(transform.position + groundCheckOffset + Vector3.down * groundCheckDistance / 2f, new Vector3(1.5f * groundCheckRadius, groundCheckDistance, 1.5f * groundCheckRadius));
     }
 }
