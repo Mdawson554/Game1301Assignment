@@ -10,6 +10,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float runningSpeedMultiplier = 1.5f;
     [SerializeField] private Transform cameraTransform;
 
+    [Header("Camera Movement")]
+    [SerializeField] private float cameraRotationResponse = 10f;
+
     [Header("Jump")]
     [SerializeField] private float jumpVelocity = 10f;
 
@@ -37,13 +40,12 @@ public class PlayerController : MonoBehaviour
     private bool _isInteracting;
 
     private float activeRunningSpeedMultiplier = 1f;
-    
+
     private readonly int walkingAnimatorHash = Animator.StringToHash("Walking");
     private readonly int runningAnimatorHash = Animator.StringToHash("Running");
     private readonly int jumpingAnimatorHash = Animator.StringToHash("Jumping");
     private readonly int interactingAnimatorHash = Animator.StringToHash("Interacting");
-
-
+    
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -69,33 +71,29 @@ public class PlayerController : MonoBehaviour
         ReadInput();
         if (interactInputAction != null)
         {
-            _isInteracting =
-                interactInputAction.action.IsPressed();
+            _isInteracting = interactInputAction.action.IsPressed();
         }
         else
         {
             _isInteracting = false;
         }
-
-        UpdateAnimations();
     }
-
-
+    
     private void FixedUpdate()
     {
-        CalculateMovement();
+        CalculateCameraRelativeMovement();
         CheckGrounded();
         HandleLanding();
         ApplyMovement();
         ApplyRotation();
+        UpdateAnimations();
     }
-
+    
     private void ReadInput()
     {
         if (moveInputAction != null)
         {
-            moveInput =
-                moveInputAction.action.ReadValue<Vector2>();
+            moveInput = moveInputAction.action.ReadValue<Vector2>();
         }
         else
         {
@@ -103,26 +101,31 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void CalculateMovement()
+    private void CalculateCameraRelativeMovement()
     {
         if (cameraTransform == null)
         {
             moveDirection = Vector3.zero;
             return;
         }
-        Vector3 cameraForward =
-            cameraTransform.forward;
-
-        Vector3 cameraRight =
-            cameraTransform.right;
+        Vector3 cameraForward = cameraTransform.forward;
+        Vector3 cameraRight = cameraTransform.right;
         cameraForward.y = 0f;
         cameraRight.y = 0f;
+
         cameraForward.Normalize();
         cameraRight.Normalize();
+
         moveDirection =
             cameraForward * moveInput.y +
             cameraRight * moveInput.x;
+
+        if (moveDirection.sqrMagnitude > 1f)
+        {
+            moveDirection.Normalize();
+        }
     }
+
 
     private void ApplyMovement()
     {
@@ -130,46 +133,36 @@ public class PlayerController : MonoBehaviour
         {
             return;
         }
+
         Vector3 velocity =
             moveDirection *
             movementSpeed *
             activeRunningSpeedMultiplier;
+
         rb.linearVelocity = new Vector3(
             velocity.x,
             rb.linearVelocity.y,
             velocity.z
         );
     }
+
+
     private void ApplyRotation()
     {
-        if (rb == null)
+        if (rb == null || moveDirection.sqrMagnitude <= 0.001f)
         {
             return;
         }
-        if (moveDirection.sqrMagnitude <= 0.001f)
-        {
-            return;
-        }
-        Quaternion targetRotation =
-            Quaternion.LookRotation(moveDirection);
-        Quaternion finalRotation =
-            Quaternion.Slerp(
-                rb.rotation,
-                targetRotation,
-                rotationSpeed * Time.fixedDeltaTime
-            );
+        Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
+        Quaternion finalRotation = Quaternion.Slerp(rb.rotation, targetRotation, cameraRotationResponse * Time.fixedDeltaTime);
         rb.MoveRotation(finalRotation);
     }
 
+
     private void UpdateAnimations()
     {
-        bool isMoving =
-            moveInput.sqrMagnitude > 0.01f;
-
-        bool isRunning =
-            runInputAction != null &&
-            runInputAction.action.IsPressed() &&
-            isMoving;
+        bool isMoving = moveInput.sqrMagnitude > 0.01f;
+        bool isRunning = runInputAction != null && runInputAction.action.IsPressed() && isMoving;
         if (_isInteracting)
         {
             anim.SetBool(walkingAnimatorHash, false);
@@ -182,8 +175,7 @@ public class PlayerController : MonoBehaviour
             anim.SetBool(walkingAnimatorHash, false);
             anim.SetBool(runningAnimatorHash, true);
             anim.SetBool(interactingAnimatorHash, false);
-            activeRunningSpeedMultiplier =
-                runningSpeedMultiplier;
+            activeRunningSpeedMultiplier = runningSpeedMultiplier;
         }
         else if (isMoving)
         {
@@ -199,12 +191,10 @@ public class PlayerController : MonoBehaviour
             anim.SetBool(interactingAnimatorHash, false);
             activeRunningSpeedMultiplier = 1f;
         }
-
-        anim.SetBool(
-            jumpingAnimatorHash,
-            _isJumping
-        );
+        anim.SetBool(jumpingAnimatorHash, _isJumping);
     }
+
+
     private void Jump(InputAction.CallbackContext ctx)
     {
         CheckGrounded();
@@ -213,18 +203,13 @@ public class PlayerController : MonoBehaviour
             return;
         }
         _isJumping = true;
-        rb.linearVelocity = new Vector3(
-            rb.linearVelocity.x,
-            0f,
-            rb.linearVelocity.z
-        );
-        rb.AddForce(
-            Vector3.up * jumpVelocity,
-            ForceMode.Impulse
-        );
+        rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+        rb.AddForce(Vector3.up * jumpVelocity, ForceMode.Impulse);
         _isGrounded = false;
         anim.SetBool(jumpingAnimatorHash, true);
     }
+
+
     private void CheckGrounded()
     {
         _isGrounded = Physics.SphereCast(
@@ -237,12 +222,9 @@ public class PlayerController : MonoBehaviour
         );
     }
 
-
     private void HandleLanding()
     {
-        if (!_wasGrounded &&
-            _isGrounded &&
-            _isJumping)
+        if (!_wasGrounded && _isGrounded && _isJumping)
         {
             _isJumping = false;
 
@@ -253,11 +235,13 @@ public class PlayerController : MonoBehaviour
         }
         _wasGrounded = _isGrounded;
     }
-
+    
     public bool IsGrounded()
     {
         return _isGrounded;
     }
+
+
     public bool IsInteracting()
     {
         return _isInteracting;
