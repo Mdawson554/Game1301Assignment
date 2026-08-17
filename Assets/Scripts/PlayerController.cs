@@ -24,6 +24,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private InputActionReference moveInputAction;
     [SerializeField] private InputActionReference runInputAction;
     [SerializeField] private InputActionReference jumpInputAction;
+    [SerializeField] private InputActionReference InteractInputAction;
 
     private Rigidbody rb;
     private Animator anim;
@@ -38,12 +39,12 @@ public class PlayerController : MonoBehaviour
     private readonly int walkingAnimatorHash = Animator.StringToHash("Walking");
     private readonly int runningAnimatorHash = Animator.StringToHash("Running");
     private readonly int jumpingAnimatorHash = Animator.StringToHash("Jumping");
+    private readonly int InteractingAnimatorHash = Animator.StringToHash("Interacting");
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         anim = GetComponent<Animator>();
-
         jumpInputAction.action.performed += Jump;
     }
 
@@ -58,43 +59,50 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         moveInput = moveInputAction.action.ReadValue<Vector2>();
+        
         bool isMoving = moveInput.sqrMagnitude > 0.01f;
         bool isRunning = runInputAction.action.IsPressed() && isMoving;
-        UpdateMovementAnimation(isMoving, isRunning);
+        bool isInteracting = InteractInputAction.action.IsPressed();
+        
+        UpdateMovementAnimation(isMoving, isRunning, isInteracting);
         anim.SetBool(jumpingAnimatorHash, _isJumping);
     }
 
     private void FixedUpdate()
     {
         CheckGrounded();
-
         HandleLanding();
-
         MovePlayer();
         RotatePlayer();
     }
 
-    private void UpdateMovementAnimation(bool isMoving, bool isRunning)
+    private void UpdateMovementAnimation(bool isMoving, bool isRunning, bool isInteracting)
     {
         if (isRunning)
         {
             anim.SetBool(walkingAnimatorHash, false);
             anim.SetBool(runningAnimatorHash, true);
-
+            anim.SetBool(InteractingAnimatorHash, false);
             activeRunningSpeedMultiplier = runningSpeedMultiplier;
         }
         else if (isMoving)
         {
             anim.SetBool(walkingAnimatorHash, true);
             anim.SetBool(runningAnimatorHash, false);
-
+            anim.SetBool(InteractingAnimatorHash, false);
             activeRunningSpeedMultiplier = 1f;
+        }
+        else if (isInteracting)
+        {
+            anim.SetBool(walkingAnimatorHash, false);
+            anim.SetBool(runningAnimatorHash, true);
+            anim.SetBool(InteractingAnimatorHash, true);
         }
         else
         {
             anim.SetBool(walkingAnimatorHash, false);
             anim.SetBool(runningAnimatorHash, false);
-
+            anim.SetBool(InteractingAnimatorHash, false);
             activeRunningSpeedMultiplier = 1f;
         }
     }
@@ -103,22 +111,17 @@ public class PlayerController : MonoBehaviour
     {
         Vector3 cameraForward = cameraTransform.forward;
         Vector3 cameraRight = cameraTransform.right;
-
         cameraForward.y = 0f;
         cameraRight.y = 0f;
-
         cameraForward.Normalize();
         cameraRight.Normalize();
-
         Vector3 moveDirection =
             cameraForward * moveInput.y +
             cameraRight * moveInput.x;
-
         Vector3 velocity =
             moveDirection *
             movementSpeed *
             activeRunningSpeedMultiplier;
-
         rb.linearVelocity = new Vector3(
             velocity.x,
             rb.linearVelocity.y,
@@ -130,17 +133,13 @@ public class PlayerController : MonoBehaviour
     {
         Vector3 cameraForward = cameraTransform.forward;
         Vector3 cameraRight = cameraTransform.right;
-
         cameraForward.y = 0f;
         cameraRight.y = 0f;
-
         cameraForward.Normalize();
         cameraRight.Normalize();
-
         Vector3 moveDirection =
             cameraForward * moveInput.y +
             cameraRight * moveInput.x;
-
         if (moveDirection.sqrMagnitude > 0.01f)
         {
             Quaternion targetRotation =
@@ -152,34 +151,28 @@ public class PlayerController : MonoBehaviour
                     targetRotation,
                     rotationSpeed
                 );
-
             rb.MoveRotation(finalRotation);
         }
     }
-
+    
     private void Jump(InputAction.CallbackContext ctx)
     {
         CheckGrounded();
-
         if (!_isGrounded || _isJumping)
         {
             return;
         }
-
         _isJumping = true;
         rb.linearVelocity = new Vector3(
             rb.linearVelocity.x,
             0f,
             rb.linearVelocity.z
         );
-
         rb.AddForce(
             Vector3.up * jumpVelocity,
             ForceMode.Impulse
         );
-
         _isGrounded = false;
-
         anim.SetBool(jumpingAnimatorHash, true);
     }
 
@@ -214,19 +207,16 @@ public class PlayerController : MonoBehaviour
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.purple;
-
         Gizmos.DrawSphere(
             transform.position + groundCheckOffset,
             groundCheckRadius
         );
-
         Gizmos.DrawSphere(
             transform.position +
             groundCheckOffset +
             Vector3.down * groundCheckDistance,
             groundCheckRadius
         );
-
         Gizmos.DrawCube(
             transform.position +
             groundCheckOffset +
