@@ -149,12 +149,40 @@ public class PlayerController : MonoBehaviour
 
     private void ApplyRotation()
     {
-        if (rb == null || moveDirection.sqrMagnitude <= 0.001f)
+        if (rb == null || cameraTransform == null)
         {
             return;
         }
-        Quaternion targetRotation = Quaternion.LookRotation(moveDirection);
-        Quaternion finalRotation = Quaternion.Slerp(rb.rotation, targetRotation, cameraRotationResponse * Time.fixedDeltaTime);
+
+        // Do not rotate while there is no movement input.
+        // This allows the camera to orbit around the player freely.
+        if (moveInput.sqrMagnitude <= 0.001f)
+        {
+            return;
+        }
+
+        Vector3 cameraForward = cameraTransform.forward;
+
+        // Keep rotation strictly horizontal.
+        cameraForward.y = 0f;
+
+        if (cameraForward.sqrMagnitude <= 0.001f)
+        {
+            return;
+        }
+
+        cameraForward.Normalize();
+
+        Quaternion targetRotation =
+            Quaternion.LookRotation(cameraForward);
+
+        Quaternion finalRotation =
+            Quaternion.Slerp(
+                rb.rotation,
+                targetRotation,
+                cameraRotationResponse * Time.fixedDeltaTime
+            );
+
         rb.MoveRotation(finalRotation);
     }
 
