@@ -585,7 +585,7 @@ AnimatorStateTransition:
   m_TransitionDuration: 0.25
   m_TransitionOffset: 0
   m_ExitTime: 0.9050633
-  m_HasExitTime: 1
+  m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
@@ -654,7 +654,7 @@ BlendTree:
   - serializedVersion: 2
     m_Motion: {fileID: -203655887218126122, guid: bd5d2ef62e96c0a4bbfeae4a3bb10c90, type: 3}
     m_Threshold: 0.63671875
-    m_Position: {x: 0, y: 1}
+    m_Position: {x: 1, y: 0}
     m_TimeScale: 1
     m_CycleOffset: 0
     m_DirectBlendParameter: Blend
@@ -670,7 +670,7 @@ BlendTree:
   - serializedVersion: 2
     m_Motion: {fileID: -203655887218126122, guid: bb88bdccf3333ba46ae19ef07b9822b1, type: 3}
     m_Threshold: 0.66015625
-    m_Position: {x: 0, y: -1}
+    m_Position: {x: 0, y: 1}
     m_TimeScale: 1
     m_CycleOffset: 0
     m_DirectBlendParameter: Blend
@@ -678,13 +678,13 @@ BlendTree:
   - serializedVersion: 2
     m_Motion: {fileID: -203655887218126122, guid: da841c7768c173a42812350bb5658906, type: 3}
     m_Threshold: 0.671875
-    m_Position: {x: 0, y: 1}
+    m_Position: {x: 0, y: -1}
     m_TimeScale: 1
     m_CycleOffset: 0
     m_DirectBlendParameter: Blend
     m_Mirror: 0
   - serializedVersion: 2
-    m_Motion: {fileID: -203655887218126122, guid: 5c53011e0e4504d4d998826d5518d7df, type: 3}
+    m_Motion: {fileID: -203655887218126122, guid: 450a2c375e85c154b8b1cf65572be92a, type: 3}
     m_Threshold: 0.68359375
     m_Position: {x: 1, y: -1}
     m_TimeScale: 1
@@ -692,7 +692,7 @@ BlendTree:
     m_DirectBlendParameter: Blend
     m_Mirror: 0
   - serializedVersion: 2
-    m_Motion: {fileID: -203655887218126122, guid: e1d556b9bed0c7d42b29634ef0d1e70a, type: 3}
+    m_Motion: {fileID: -203655887218126122, guid: 029e52903318f4a47a11af99ed39d0ed, type: 3}
     m_Threshold: 0.6953125
     m_Position: {x: -1, y: -1}
     m_TimeScale: 1
@@ -798,7 +798,7 @@ AnimatorStateTransition:
   m_TransitionDuration: 0.25
   m_TransitionOffset: 0
   m_ExitTime: 0.9050633
-  m_HasExitTime: 1
+  m_HasExitTime: 0
   m_HasFixedDuration: 1
   m_InterruptionSource: 0
   m_OrderedInterruption: 1
