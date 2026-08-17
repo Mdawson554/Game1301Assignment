@@ -50,6 +50,7 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         anim = GetComponent<Animator>();
+        ShowMouse(false);
         if (jumpInputAction != null)
         {
             jumpInputAction.action.performed += Jump;
@@ -99,6 +100,12 @@ public class PlayerController : MonoBehaviour
         {
             moveInput = Vector2.zero;
         }
+    }
+
+    private void ShowMouse(bool value)
+    {
+        Cursor.visible = value;
+        Cursor.lockState = value ? CursorLockMode.None : CursorLockMode.Locked;
     }
 
     private void CalculateCameraRelativeMovement()
@@ -153,36 +160,19 @@ public class PlayerController : MonoBehaviour
         {
             return;
         }
-
-        // Do not rotate while there is no movement input.
-        // This allows the camera to orbit around the player freely.
         if (moveInput.sqrMagnitude <= 0.001f)
         {
             return;
         }
-
         Vector3 cameraForward = cameraTransform.forward;
-
-        // Keep rotation strictly horizontal.
         cameraForward.y = 0f;
-
         if (cameraForward.sqrMagnitude <= 0.001f)
         {
             return;
         }
-
         cameraForward.Normalize();
-
-        Quaternion targetRotation =
-            Quaternion.LookRotation(cameraForward);
-
-        Quaternion finalRotation =
-            Quaternion.Slerp(
-                rb.rotation,
-                targetRotation,
-                cameraRotationResponse * Time.fixedDeltaTime
-            );
-
+        Quaternion targetRotation = Quaternion.LookRotation(cameraForward);
+        Quaternion finalRotation = Quaternion.Slerp(rb.rotation, targetRotation, cameraRotationResponse * Time.fixedDeltaTime);
         rb.MoveRotation(finalRotation);
     }
 

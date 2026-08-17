@@ -1718,7 +1718,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6099133915843615475, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
       propertyPath: jumpVelocity
-      value: 5
+      value: 4.5
       objectReference: {fileID: 0}
     - target: {fileID: 6099133915843615475, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
       propertyPath: cameraTransform
@@ -1752,6 +1752,10 @@ PrefabInstance:
       propertyPath: interactInputAction
       value: 
       objectReference: {fileID: 1781555164194001046, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+    - target: {fileID: 6099133915843615475, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
+      propertyPath: cameraRotationResponse
+      value: 25
+      objectReference: {fileID: 0}
     - target: {fileID: 6187659055094348983, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
       propertyPath: m_LocalPosition.x
       value: -0.0056245215
