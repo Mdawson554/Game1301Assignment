@@ -2245,7 +2245,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerCamera
   cameraTransform: {fileID: 441648983}
-  cameraRotationResponse: 10
+  cameraRotationResponse: 2
   cameraTurnThreshold: -0.85
 --- !u!1 &9171101297461841
 GameObject:
