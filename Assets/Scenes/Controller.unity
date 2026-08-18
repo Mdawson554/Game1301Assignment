@@ -2225,6 +2225,8 @@ MonoBehaviour:
   movementSpeed: 5
   runningSpeedMultiplier: 1.5
   cameraTransform: {fileID: 441648983}
+  cameraRotationResponse: 10
+  cameraTurnThreshold: -0.85
 --- !u!1 &9171101297461841
 GameObject:
   m_ObjectHideFlags: 0
