@@ -32,6 +32,7 @@ public class PlayerInputManager : MonoBehaviour
             jumpInputAction.action.performed -= OnJumpPerformed;
         }
     }
+
     private void Update()
     {
         ReadInput();
@@ -54,23 +55,14 @@ public class PlayerInputManager : MonoBehaviour
             MoveInput = Vector2.zero;
         }
     }
+
     private void ReadActionInput()
     {
-        bool isMoving = MoveInput.sqrMagnitude > 0.01f;
-
-        IsRunning =
-            runInputAction != null &&
-            runInputAction.action.IsPressed() &&
-            isMoving;
-
-        IsInteracting =
-            interactInputAction != null &&
-            interactInputAction.action.IsPressed();
-
-        IsAttacking =
-            attackInputAction != null &&
-            attackInputAction.action.IsPressed();
+        IsRunning = runInputAction != null && runInputAction.action.IsPressed();
+        IsInteracting = interactInputAction != null && interactInputAction.action.IsPressed();
+        IsAttacking = attackInputAction != null && attackInputAction.action.IsPressed();
     }
+
     private void OnJumpPerformed(InputAction.CallbackContext context)
     {
         JumpPressed?.Invoke();

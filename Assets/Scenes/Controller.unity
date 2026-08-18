@@ -1737,6 +1737,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: -2099379676528639254, guid: 052faaac586de48259a63d0c4782560b, type: 3}
     - target: {fileID: 6099133915843615475, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
+      propertyPath: playerLocomotion
+      value: 
+      objectReference: {fileID: 1949550552}
+    - target: {fileID: 6099133915843615475, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
       propertyPath: attackInputAction
       value: 
       objectReference: {fileID: 1120369429361536294, guid: 052faaac586de48259a63d0c4782560b, type: 3}
@@ -2158,6 +2162,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6412472672248879263, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1949550551}
+    - targetCorrespondingSourceObject: {fileID: 6412472672248879263, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1949550552}
   m_SourcePrefab: {fileID: 100100000, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
 --- !u!4 &1250855202 stripped
 Transform:
@@ -2203,6 +2210,21 @@ MonoBehaviour:
   jumpInputAction: {fileID: -2099379676528639254, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   interactInputAction: {fileID: 1781555164194001046, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   attackInputAction: {fileID: 1120369429361536294, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+--- !u!114 &1949550552
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1949550545}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8b0c8c86c0b7d4640addbd1493308406, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerLocomotion
+  movementSpeed: 5
+  runningSpeedMultiplier: 1.5
+  cameraTransform: {fileID: 441648983}
 --- !u!1 &9171101297461841
 GameObject:
   m_ObjectHideFlags: 0
