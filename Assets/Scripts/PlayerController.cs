@@ -1,5 +1,3 @@
-using System;
-using _Project.Scripts.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -30,8 +28,10 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private InputActionReference interactInputAction;
     [SerializeField] private InputActionReference attackInputAction;
 
+    [Header("Dependencies")]
+    [SerializeField] private PlayerAnimator playerAnimator;
+
     private Rigidbody rb;
-    private Animator anim;
 
     private Vector2 moveInput;
     private Vector3 moveDirection;
@@ -44,17 +44,18 @@ public class PlayerController : MonoBehaviour
 
     private float activeRunningSpeedMultiplier = 1f;
 
-    private readonly int walkingAnimatorHash = Animator.StringToHash("Walking");
-    private readonly int runningAnimatorHash = Animator.StringToHash("Running");
-    private readonly int jumpingAnimatorHash = Animator.StringToHash("Jumping");
-    private readonly int interactingAnimatorHash = Animator.StringToHash("Interacting");
-    private readonly int attackingAnimatorHash = Animator.StringToHash("Attacking");
+    private void Awake()
+    {
+        rb = GetComponent<Rigidbody>();
+
+        if (playerAnimator == null)
+        {
+            playerAnimator = GetComponent<PlayerAnimator>();
+        }
+    }
 
     private void Start()
     {
-        rb = GetComponent<Rigidbody>();
-        anim = GetComponent<Animator>();
-
         ShowMouse(false);
 
         if (jumpInputAction != null)
@@ -74,26 +75,7 @@ public class PlayerController : MonoBehaviour
     private void Update()
     {
         ReadInput();
-
-        // Interaction input
-        if (interactInputAction != null)
-        {
-            _isInteracting = interactInputAction.action.IsPressed();
-        }
-        else
-        {
-            _isInteracting = false;
-        }
-
-        // Attack input
-        if (attackInputAction != null)
-        {
-            _isAttacking = attackInputAction.action.IsPressed();
-        }
-        else
-        {
-            _isAttacking = false;
-        }
+        ReadActionInput();
     }
 
     private void FixedUpdate()
@@ -101,11 +83,11 @@ public class PlayerController : MonoBehaviour
         CalculateCameraRelativeMovement();
         CheckGrounded();
         HandleLanding();
+        CalculateMovementSpeed();
         ApplyMovement();
         ApplyRotation();
-        UpdateAnimations();
+        UpdatePlayerAnimator();
     }
-
     private void ReadInput()
     {
         if (moveInputAction != null)
@@ -118,10 +100,31 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void ReadActionInput()
+    {
+        if (interactInputAction != null)
+        {
+            _isInteracting = interactInputAction.action.IsPressed();
+        }
+        else
+        {
+            _isInteracting = false;
+        }
+        if (attackInputAction != null)
+        {
+            _isAttacking = attackInputAction.action.IsPressed();
+        }
+        else
+        {
+            _isAttacking = false;
+        }
+    }
     private void ShowMouse(bool value)
     {
         Cursor.visible = value;
-        Cursor.lockState = value ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.lockState = value
+            ? CursorLockMode.None
+            : CursorLockMode.Locked;
     }
 
     private void CalculateCameraRelativeMovement()
@@ -131,21 +134,36 @@ public class PlayerController : MonoBehaviour
             moveDirection = Vector3.zero;
             return;
         }
-
         Vector3 cameraForward = cameraTransform.forward;
         Vector3 cameraRight = cameraTransform.right;
-
         cameraForward.y = 0f;
         cameraRight.y = 0f;
-
         cameraForward.Normalize();
         cameraRight.Normalize();
-
         moveDirection = cameraForward * moveInput.y + cameraRight * moveInput.x;
-
         if (moveDirection.sqrMagnitude > 1f)
         {
             moveDirection.Normalize();
+        }
+    }
+    private void CalculateMovementSpeed()
+    {
+        bool isMoving = moveInput.sqrMagnitude > 0.01f;
+        bool isRunning =
+            runInputAction != null &&
+            runInputAction.action.IsPressed() &&
+            isMoving;
+        if (_isAttacking || _isInteracting)
+        {
+            activeRunningSpeedMultiplier = 1f;
+        }
+        else if (isRunning)
+        {
+            activeRunningSpeedMultiplier = runningSpeedMultiplier;
+        }
+        else
+        {
+            activeRunningSpeedMultiplier = 1f;
         }
     }
 
@@ -155,14 +173,8 @@ public class PlayerController : MonoBehaviour
         {
             return;
         }
-
         Vector3 velocity = moveDirection * movementSpeed * activeRunningSpeedMultiplier;
-
-        rb.linearVelocity = new Vector3(
-            velocity.x,
-            rb.linearVelocity.y,
-            velocity.z
-        );
+        rb.linearVelocity = new Vector3(velocity.x, rb.linearVelocity.y, velocity.z);
     }
 
     private void ApplyRotation()
@@ -171,137 +183,42 @@ public class PlayerController : MonoBehaviour
         {
             return;
         }
-
         if (moveInput.sqrMagnitude <= 0.001f)
         {
             return;
         }
-
         Vector3 cameraForward = cameraTransform.forward;
         cameraForward.y = 0f;
-
         if (cameraForward.sqrMagnitude <= 0.001f)
         {
             return;
         }
-
         cameraForward.Normalize();
-
         Quaternion targetRotation = Quaternion.LookRotation(cameraForward);
-
-        Quaternion finalRotation = Quaternion.Slerp(
-            rb.rotation,
-            targetRotation,
-            cameraRotationResponse * Time.fixedDeltaTime
-        );
-
+        Quaternion finalRotation = Quaternion.Slerp(rb.rotation, targetRotation, cameraRotationResponse * Time.fixedDeltaTime);
         rb.MoveRotation(finalRotation);
     }
-
-    private void UpdateAnimations()
+    private void UpdatePlayerAnimator()
     {
+        if (playerAnimator == null)
+        {
+            return;
+        }
         bool isMoving = moveInput.sqrMagnitude > 0.01f;
-
-        bool isRunning =
-            runInputAction != null &&
-            runInputAction.action.IsPressed() &&
-            isMoving;
-
-        // ---------------------------------------------------------
-        // ATTACK
-        // ---------------------------------------------------------
-        // Attack gets highest priority, just like a dedicated action
-        // state should.
-        if (_isAttacking)
-        {
-            anim.SetBool(walkingAnimatorHash, false);
-            anim.SetBool(runningAnimatorHash, false);
-            anim.SetBool(interactingAnimatorHash, false);
-            anim.SetBool(attackingAnimatorHash, true);
-
-            activeRunningSpeedMultiplier = 1f;
-        }
-
-        // ---------------------------------------------------------
-        // INTERACT
-        // ---------------------------------------------------------
-        else if (_isInteracting)
-        {
-            anim.SetBool(walkingAnimatorHash, false);
-            anim.SetBool(runningAnimatorHash, false);
-            anim.SetBool(interactingAnimatorHash, true);
-            anim.SetBool(attackingAnimatorHash, false);
-
-            activeRunningSpeedMultiplier = 1f;
-        }
-
-        // ---------------------------------------------------------
-        // RUN
-        // ---------------------------------------------------------
-        else if (isRunning)
-        {
-            anim.SetBool(walkingAnimatorHash, false);
-            anim.SetBool(runningAnimatorHash, true);
-            anim.SetBool(interactingAnimatorHash, false);
-            anim.SetBool(attackingAnimatorHash, false);
-
-            activeRunningSpeedMultiplier = runningSpeedMultiplier;
-        }
-
-        // ---------------------------------------------------------
-        // WALK
-        // ---------------------------------------------------------
-        else if (isMoving)
-        {
-            anim.SetBool(walkingAnimatorHash, true);
-            anim.SetBool(runningAnimatorHash, false);
-            anim.SetBool(interactingAnimatorHash, false);
-            anim.SetBool(attackingAnimatorHash, false);
-
-            activeRunningSpeedMultiplier = 1f;
-        }
-
-        // ---------------------------------------------------------
-        // IDLE
-        // ---------------------------------------------------------
-        else
-        {
-            anim.SetBool(walkingAnimatorHash, false);
-            anim.SetBool(runningAnimatorHash, false);
-            anim.SetBool(interactingAnimatorHash, false);
-            anim.SetBool(attackingAnimatorHash, false);
-
-            activeRunningSpeedMultiplier = 1f;
-        }
-
-        anim.SetBool(jumpingAnimatorHash, _isJumping);
+        bool isRunning = runInputAction != null && runInputAction.action.IsPressed() && isMoving;
+        playerAnimator.UpdateAnimationState(moveInput, isRunning, _isInteracting, _isAttacking, _isJumping);
     }
-
     private void Jump(InputAction.CallbackContext ctx)
     {
         CheckGrounded();
-
         if (!_isGrounded || _isJumping)
         {
             return;
         }
-
         _isJumping = true;
-
-        rb.linearVelocity = new Vector3(
-            rb.linearVelocity.x,
-            0f,
-            rb.linearVelocity.z
-        );
-
-        rb.AddForce(
-            Vector3.up * jumpVelocity,
-            ForceMode.Impulse
-        );
-
+        rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+        rb.AddForce(Vector3.up * jumpVelocity, ForceMode.Impulse);
         _isGrounded = false;
-
-        anim.SetBool(jumpingAnimatorHash, true);
     }
 
     private void CheckGrounded()
@@ -321,52 +238,26 @@ public class PlayerController : MonoBehaviour
         if (!_wasGrounded && _isGrounded && _isJumping)
         {
             _isJumping = false;
-            anim.SetBool(jumpingAnimatorHash, false);
         }
-
         _wasGrounded = _isGrounded;
     }
-
     public bool IsGrounded()
     {
         return _isGrounded;
     }
-
     public bool IsInteracting()
     {
         return _isInteracting;
     }
-
     public bool IsAttacking()
     {
         return _isAttacking;
     }
-
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.purple;
-
-        Gizmos.DrawSphere(
-            transform.position + groundCheckOffset,
-            groundCheckRadius
-        );
-
-        Gizmos.DrawSphere(
-            transform.position +
-            groundCheckOffset +
-            Vector3.down * groundCheckDistance,
-            groundCheckRadius
-        );
-
-        Gizmos.DrawCube(
-            transform.position +
-            groundCheckOffset +
-            Vector3.down * groundCheckDistance / 2f,
-            new Vector3(
-                1.5f * groundCheckRadius,
-                groundCheckDistance,
-                1.5f * groundCheckRadius
-            )
-        );
+        Gizmos.DrawSphere(transform.position + groundCheckOffset, groundCheckRadius);
+        Gizmos.DrawSphere(transform.position + groundCheckOffset + Vector3.down * groundCheckDistance, groundCheckRadius);
+        Gizmos.DrawCube(transform.position + groundCheckOffset + Vector3.down * groundCheckDistance / 2f, new Vector3(1.5f * groundCheckRadius, groundCheckDistance, 1.5f * groundCheckRadius));
     }
 }
