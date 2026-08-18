@@ -1,11 +1,9 @@
 using UnityEngine;
-using UnityEngine.InputSystem;
 
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement")]
     [SerializeField] private float movementSpeed = 5f;
-    [SerializeField] private float rotationSpeed = 10f;
     [SerializeField] private float runningSpeedMultiplier = 1.5f;
     [SerializeField] private Transform cameraTransform;
 
@@ -21,63 +19,51 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float groundCheckRadius = 0.3f;
     [SerializeField] private LayerMask groundLayer;
 
-    [Header("Input Actions")]
-    [SerializeField] private InputActionReference moveInputAction;
-    [SerializeField] private InputActionReference runInputAction;
-    [SerializeField] private InputActionReference jumpInputAction;
-    [SerializeField] private InputActionReference interactInputAction;
-    [SerializeField] private InputActionReference attackInputAction;
-
     [Header("Dependencies")]
+    [SerializeField] private PlayerInputManager playerInput;
     [SerializeField] private PlayerAnimator playerAnimator;
 
     private Rigidbody rb;
-
-    private Vector2 moveInput;
     private Vector3 moveDirection;
-
     private bool _isGrounded;
     private bool _wasGrounded;
     private bool _isJumping;
-    private bool _isInteracting;
-    private bool _isAttacking;
-
     private float activeRunningSpeedMultiplier = 1f;
-
+    
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
+
+        if (playerInput == null)
+        {
+            playerInput = GetComponent<PlayerInputManager>();
+        }
 
         if (playerAnimator == null)
         {
             playerAnimator = GetComponent<PlayerAnimator>();
         }
     }
-
     private void Start()
     {
         ShowMouse(false);
+    }
 
-        if (jumpInputAction != null)
+    private void OnEnable()
+    {
+        if (playerInput != null)
         {
-            jumpInputAction.action.performed += Jump;
+            playerInput.JumpPressed += Jump;
         }
     }
 
-    private void OnDestroy()
+    private void OnDisable()
     {
-        if (jumpInputAction != null)
+        if (playerInput != null)
         {
-            jumpInputAction.action.performed -= Jump;
+            playerInput.JumpPressed -= Jump;
         }
     }
-
-    private void Update()
-    {
-        ReadInput();
-        ReadActionInput();
-    }
-
     private void FixedUpdate()
     {
         CalculateCameraRelativeMovement();
@@ -88,40 +74,10 @@ public class PlayerController : MonoBehaviour
         ApplyRotation();
         UpdatePlayerAnimator();
     }
-    private void ReadInput()
-    {
-        if (moveInputAction != null)
-        {
-            moveInput = moveInputAction.action.ReadValue<Vector2>();
-        }
-        else
-        {
-            moveInput = Vector2.zero;
-        }
-    }
-
-    private void ReadActionInput()
-    {
-        if (interactInputAction != null)
-        {
-            _isInteracting = interactInputAction.action.IsPressed();
-        }
-        else
-        {
-            _isInteracting = false;
-        }
-        if (attackInputAction != null)
-        {
-            _isAttacking = attackInputAction.action.IsPressed();
-        }
-        else
-        {
-            _isAttacking = false;
-        }
-    }
     private void ShowMouse(bool value)
     {
         Cursor.visible = value;
+
         Cursor.lockState = value
             ? CursorLockMode.None
             : CursorLockMode.Locked;
@@ -140,7 +96,7 @@ public class PlayerController : MonoBehaviour
         cameraRight.y = 0f;
         cameraForward.Normalize();
         cameraRight.Normalize();
-        moveDirection = cameraForward * moveInput.y + cameraRight * moveInput.x;
+        moveDirection = cameraForward * playerInput.MoveInput.y + cameraRight * playerInput.MoveInput.x;
         if (moveDirection.sqrMagnitude > 1f)
         {
             moveDirection.Normalize();
@@ -148,16 +104,11 @@ public class PlayerController : MonoBehaviour
     }
     private void CalculateMovementSpeed()
     {
-        bool isMoving = moveInput.sqrMagnitude > 0.01f;
-        bool isRunning =
-            runInputAction != null &&
-            runInputAction.action.IsPressed() &&
-            isMoving;
-        if (_isAttacking || _isInteracting)
+        if (playerInput.IsAttacking || playerInput.IsInteracting)
         {
             activeRunningSpeedMultiplier = 1f;
         }
-        else if (isRunning)
+        else if (playerInput.IsRunning)
         {
             activeRunningSpeedMultiplier = runningSpeedMultiplier;
         }
@@ -183,7 +134,7 @@ public class PlayerController : MonoBehaviour
         {
             return;
         }
-        if (moveInput.sqrMagnitude <= 0.001f)
+        if (playerInput.MoveInput.sqrMagnitude <= 0.001f)
         {
             return;
         }
@@ -204,11 +155,16 @@ public class PlayerController : MonoBehaviour
         {
             return;
         }
-        bool isMoving = moveInput.sqrMagnitude > 0.01f;
-        bool isRunning = runInputAction != null && runInputAction.action.IsPressed() && isMoving;
-        playerAnimator.UpdateAnimationState(moveInput, isRunning, _isInteracting, _isAttacking, _isJumping);
+        playerAnimator.UpdateAnimationState(
+            playerInput.MoveInput,
+            playerInput.IsRunning,
+            playerInput.IsInteracting,
+            playerInput.IsAttacking,
+            _isJumping
+        );
     }
-    private void Jump(InputAction.CallbackContext ctx)
+
+    private void Jump()
     {
         CheckGrounded();
         if (!_isGrounded || _isJumping)
@@ -220,17 +176,9 @@ public class PlayerController : MonoBehaviour
         rb.AddForce(Vector3.up * jumpVelocity, ForceMode.Impulse);
         _isGrounded = false;
     }
-
     private void CheckGrounded()
     {
-        _isGrounded = Physics.SphereCast(
-            transform.position + groundCheckOffset,
-            groundCheckRadius,
-            Vector3.down,
-            out RaycastHit hit,
-            groundCheckDistance,
-            groundLayer
-        );
+        _isGrounded = Physics.SphereCast(transform.position + groundCheckOffset, groundCheckRadius, Vector3.down, out RaycastHit hit, groundCheckDistance, groundLayer);
     }
 
     private void HandleLanding()
@@ -245,13 +193,17 @@ public class PlayerController : MonoBehaviour
     {
         return _isGrounded;
     }
+
     public bool IsInteracting()
     {
-        return _isInteracting;
+        return playerInput != null &&
+               playerInput.IsInteracting;
     }
+
     public bool IsAttacking()
     {
-        return _isAttacking;
+        return playerInput != null &&
+               playerInput.IsAttacking;
     }
     private void OnDrawGizmos()
     {

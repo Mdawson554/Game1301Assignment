@@ -14,7 +14,6 @@ public class PlayerAnimator : MonoBehaviour
     {
         anim = GetComponent<Animator>();
     }
-
     public void UpdateAnimationState(
         Vector2 moveInput,
         bool isRunning,
@@ -63,7 +62,6 @@ public class PlayerAnimator : MonoBehaviour
         }
         anim.SetBool(jumpingAnimatorHash, isJumping);
     }
-
     private void SetLocomotion(
         bool walking,
         bool running)
@@ -75,7 +73,9 @@ public class PlayerAnimator : MonoBehaviour
         anim.SetBool(walkingAnimatorHash, walking);
         anim.SetBool(runningAnimatorHash, running);
     }
-    private void SetActions(bool interacting, bool attacking)
+    private void SetActions(
+        bool interacting,
+        bool attacking)
     {
         if (anim == null)
         {
