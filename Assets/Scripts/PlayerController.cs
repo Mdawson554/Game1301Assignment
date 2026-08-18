@@ -1,4 +1,5 @@
 using System;
+using _Project.Scripts.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -30,7 +31,6 @@ public class PlayerController : MonoBehaviour
 
     private Rigidbody rb;
     private Animator anim;
-
     private Vector2 moveInput;
     private Vector3 moveDirection;
 
@@ -57,7 +57,6 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-
     private void OnDestroy()
     {
         if (jumpInputAction != null)
@@ -65,7 +64,6 @@ public class PlayerController : MonoBehaviour
             jumpInputAction.action.performed -= Jump;
         }
     }
-
 
     private void Update()
     {
@@ -119,20 +117,14 @@ public class PlayerController : MonoBehaviour
         Vector3 cameraRight = cameraTransform.right;
         cameraForward.y = 0f;
         cameraRight.y = 0f;
-
         cameraForward.Normalize();
         cameraRight.Normalize();
-
-        moveDirection =
-            cameraForward * moveInput.y +
-            cameraRight * moveInput.x;
-
+        moveDirection = cameraForward * moveInput.y + cameraRight * moveInput.x;
         if (moveDirection.sqrMagnitude > 1f)
         {
             moveDirection.Normalize();
         }
     }
-
 
     private void ApplyMovement()
     {
@@ -140,20 +132,14 @@ public class PlayerController : MonoBehaviour
         {
             return;
         }
-
-        Vector3 velocity =
-            moveDirection *
-            movementSpeed *
-            activeRunningSpeedMultiplier;
-
+        Vector3 velocity = moveDirection * movementSpeed * activeRunningSpeedMultiplier;
         rb.linearVelocity = new Vector3(
             velocity.x,
             rb.linearVelocity.y,
             velocity.z
         );
     }
-
-
+    
     private void ApplyRotation()
     {
         if (rb == null || cameraTransform == null)
@@ -175,7 +161,6 @@ public class PlayerController : MonoBehaviour
         Quaternion finalRotation = Quaternion.Slerp(rb.rotation, targetRotation, cameraRotationResponse * Time.fixedDeltaTime);
         rb.MoveRotation(finalRotation);
     }
-
 
     private void UpdateAnimations()
     {
@@ -212,7 +197,6 @@ public class PlayerController : MonoBehaviour
         anim.SetBool(jumpingAnimatorHash, _isJumping);
     }
 
-
     private void Jump(InputAction.CallbackContext ctx)
     {
         CheckGrounded();
@@ -226,7 +210,6 @@ public class PlayerController : MonoBehaviour
         _isGrounded = false;
         anim.SetBool(jumpingAnimatorHash, true);
     }
-
 
     private void CheckGrounded()
     {
@@ -245,11 +228,7 @@ public class PlayerController : MonoBehaviour
         if (!_wasGrounded && _isGrounded && _isJumping)
         {
             _isJumping = false;
-
-            anim.SetBool(
-                jumpingAnimatorHash,
-                false
-            );
+            anim.SetBool(jumpingAnimatorHash, false);
         }
         _wasGrounded = _isGrounded;
     }
