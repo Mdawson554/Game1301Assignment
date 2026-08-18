@@ -1725,6 +1725,10 @@ PrefabInstance:
       value: 4.5
       objectReference: {fileID: 0}
     - target: {fileID: 6099133915843615475, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
+      propertyPath: playerCamera
+      value: 
+      objectReference: {fileID: 1949550553}
+    - target: {fileID: 6099133915843615475, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
       propertyPath: playerAnimator
       value: 
       objectReference: {fileID: 1949550550}
@@ -2165,6 +2169,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 6412472672248879263, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
       insertIndex: -1
       addedObject: {fileID: 1949550552}
+    - targetCorrespondingSourceObject: {fileID: 6412472672248879263, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1949550553}
   m_SourcePrefab: {fileID: 100100000, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
 --- !u!4 &1250855202 stripped
 Transform:
@@ -2224,6 +2231,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerLocomotion
   movementSpeed: 5
   runningSpeedMultiplier: 1.5
+  playerCamera: {fileID: 1949550553}
+--- !u!114 &1949550553
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1949550545}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fd8f6da922931346a919dfd3c4d0b56, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerCamera
   cameraTransform: {fileID: 441648983}
   cameraRotationResponse: 10
   cameraTurnThreshold: -0.85

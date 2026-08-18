@@ -15,6 +15,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private PlayerInputManager playerInput;
     [SerializeField] private PlayerLocomotion playerLocomotion;
     [SerializeField] private PlayerAnimator playerAnimator;
+    [SerializeField] private PlayerCamera playerCamera;
 
     private Rigidbody rb;
     private bool _isGrounded;
@@ -24,18 +25,6 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        if (playerInput == null)
-        {
-            playerInput = GetComponent<PlayerInputManager>();
-        }
-        if (playerLocomotion == null)
-        {
-            playerLocomotion = GetComponent<PlayerLocomotion>();
-        }
-        if (playerAnimator == null)
-        {
-            playerAnimator = GetComponent<PlayerAnimator>();
-        }
     }
 
     private void Start()
@@ -89,12 +78,12 @@ public class PlayerController : MonoBehaviour
 
     private void ApplyRotation()
     {
-        if (!playerLocomotion.ShouldTurnToCamera(transform))
+        if (playerCamera == null || !playerCamera.ShouldTurnToCamera(playerInput.MoveInput))
         {
             return;
         }
-        Quaternion targetRotation = playerLocomotion.GetCameraRotation();
-        Quaternion finalRotation = Quaternion.Slerp(rb.rotation, targetRotation, playerLocomotion.CameraRotationResponse * Time.fixedDeltaTime);
+        Quaternion targetRotation = playerCamera.GetTargetRotation(playerLocomotion.MoveDirection);
+        Quaternion finalRotation = Quaternion.Slerp(rb.rotation, targetRotation, playerCamera.CameraRotationResponse * Time.fixedDeltaTime);
         rb.MoveRotation(finalRotation);
     }
 
