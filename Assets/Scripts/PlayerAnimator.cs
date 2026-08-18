@@ -14,12 +14,7 @@ public class PlayerAnimator : MonoBehaviour
     {
         anim = GetComponent<Animator>();
     }
-    public void UpdateAnimationState(
-        Vector2 moveInput,
-        bool isRunning,
-        bool isInteracting,
-        bool isAttacking,
-        bool isJumping)
+    public void UpdateAnimationState(Vector2 moveInput, bool isRunning, bool isInteracting, bool isAttacking, bool isJumping)
     {
         bool isMoving = moveInput.sqrMagnitude > 0.01f;
         if (isAttacking)
@@ -56,31 +51,15 @@ public class PlayerAnimator : MonoBehaviour
     }
     public void SetJumping(bool isJumping)
     {
-        if (anim == null)
-        {
-            return;
-        }
         anim.SetBool(jumpingAnimatorHash, isJumping);
     }
-    private void SetLocomotion(
-        bool walking,
-        bool running)
+    private void SetLocomotion(bool walking, bool running)
     {
-        if (anim == null)
-        {
-            return;
-        }
         anim.SetBool(walkingAnimatorHash, walking);
         anim.SetBool(runningAnimatorHash, running);
     }
-    private void SetActions(
-        bool interacting,
-        bool attacking)
+    private void SetActions(bool interacting, bool attacking)
     {
-        if (anim == null)
-        {
-            return;
-        }
         anim.SetBool(interactingAnimatorHash, interacting);
         anim.SetBool(attackingAnimatorHash, attacking);
     }

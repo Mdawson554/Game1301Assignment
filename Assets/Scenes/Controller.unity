@@ -1717,6 +1717,10 @@ PrefabInstance:
       value: 0.054114044
       objectReference: {fileID: 0}
     - target: {fileID: 6099133915843615475, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
+      propertyPath: playerInput
+      value: 
+      objectReference: {fileID: 1949550551}
+    - target: {fileID: 6099133915843615475, guid: 2dd46bbfcfe43124eb15f81f81b70fa1, type: 3}
       propertyPath: jumpVelocity
       value: 4.5
       objectReference: {fileID: 0}

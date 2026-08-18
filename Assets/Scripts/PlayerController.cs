@@ -6,19 +6,15 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float movementSpeed = 5f;
     [SerializeField] private float runningSpeedMultiplier = 1.5f;
     [SerializeField] private Transform cameraTransform;
-
     [Header("Camera Movement")]
     [SerializeField] private float cameraRotationResponse = 10f;
-
     [Header("Jump")]
     [SerializeField] private float jumpVelocity = 10f;
-
     [Header("Ground Check")]
     [SerializeField] private Vector3 groundCheckOffset;
     [SerializeField] private float groundCheckDistance = 0.2f;
     [SerializeField] private float groundCheckRadius = 0.3f;
     [SerializeField] private LayerMask groundLayer;
-
     [Header("Dependencies")]
     [SerializeField] private PlayerInputManager playerInput;
     [SerializeField] private PlayerAnimator playerAnimator;
@@ -33,16 +29,6 @@ public class PlayerController : MonoBehaviour
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
-
-        if (playerInput == null)
-        {
-            playerInput = GetComponent<PlayerInputManager>();
-        }
-
-        if (playerAnimator == null)
-        {
-            playerAnimator = GetComponent<PlayerAnimator>();
-        }
     }
     private void Start()
     {
@@ -77,10 +63,7 @@ public class PlayerController : MonoBehaviour
     private void ShowMouse(bool value)
     {
         Cursor.visible = value;
-
-        Cursor.lockState = value
-            ? CursorLockMode.None
-            : CursorLockMode.Locked;
+        Cursor.lockState = value ? CursorLockMode.None : CursorLockMode.Locked;
     }
 
     private void CalculateCameraRelativeMovement()
@@ -120,20 +103,12 @@ public class PlayerController : MonoBehaviour
 
     private void ApplyMovement()
     {
-        if (rb == null)
-        {
-            return;
-        }
         Vector3 velocity = moveDirection * movementSpeed * activeRunningSpeedMultiplier;
         rb.linearVelocity = new Vector3(velocity.x, rb.linearVelocity.y, velocity.z);
     }
 
     private void ApplyRotation()
     {
-        if (rb == null || cameraTransform == null)
-        {
-            return;
-        }
         if (playerInput.MoveInput.sqrMagnitude <= 0.001f)
         {
             return;
@@ -151,17 +126,7 @@ public class PlayerController : MonoBehaviour
     }
     private void UpdatePlayerAnimator()
     {
-        if (playerAnimator == null)
-        {
-            return;
-        }
-        playerAnimator.UpdateAnimationState(
-            playerInput.MoveInput,
-            playerInput.IsRunning,
-            playerInput.IsInteracting,
-            playerInput.IsAttacking,
-            _isJumping
-        );
+        playerAnimator.UpdateAnimationState(playerInput.MoveInput, playerInput.IsRunning, playerInput.IsInteracting, playerInput.IsAttacking, _isJumping);
     }
 
     private void Jump()
